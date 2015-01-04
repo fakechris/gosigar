@@ -64,7 +64,7 @@ func (self *ProcMem) Get(pid int) error {
 	return notImplemented()
 }
 
-func (self *ProcTime) Get(pid int) error {
+func (self *ProcTime) Get(ch chan int) error {
 	return notImplemented()
 }
 

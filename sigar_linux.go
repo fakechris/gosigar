@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+        "time"
 )
 
 var system struct {
@@ -243,26 +244,63 @@ func (self *ProcMem) Get(pid int) error {
 	return nil
 }
 
-func (self *ProcTime) Get(pid int) error {
+func (self *ProcTime) Get(ch chan int) error {
+        var err error
+        pid := <- ch
+
+        cpu := Cpu{}
+        err = cpu.Get()
+        if err != nil {
+		return err
+	}
+
 	contents, err := readProcFile(pid, "stat")
 	if err != nil {
 		return err
-	}
+        }
 
 	fields := strings.Fields(string(contents))
 
 	user, _ := strtoull(fields[13])
 	sys, _ := strtoull(fields[14])
+
+        time.Sleep(time.Second);
+
+        cpu1 := Cpu{}
+        err = cpu1.Get()
+	if err != nil {
+		return err
+	}
+
+	contents1, err := readProcFile(pid, "stat")
+	if err != nil {
+		return err
+	}
+
+	fields1 := strings.Fields(string(contents1))
+
+	user1, _ := strtoull(fields1[13])
+	sys1, _ := strtoull(fields1[14])
+
+        diff := (cpu1.User+cpu1.Nice+cpu1.Sys+cpu1.Idle+cpu1.Wait+cpu1.Irq+cpu1.SoftIrq+cpu1.Stolen) - (cpu.User+cpu.Nice+cpu.Sys+cpu.Idle+cpu.Wait+cpu.Irq+cpu.SoftIrq+cpu.Stolen);
+        self.User = (user1-user) * 100 / diff;
+        self.Sys = (sys1-sys) * 100 / diff;
+        self.Total = self.User + self.Sys
+
+        /*
 	// convert to millis
 	self.User = user * (1000 / system.ticks)
 	self.Sys = sys * (1000 / system.ticks)
 	self.Total = self.User + self.Sys
+        */
 
 	// convert to millis
 	self.StartTime, _ = strtoull(fields[21])
 	self.StartTime /= system.ticks
 	self.StartTime += system.btime
 	self.StartTime *= 1000
+
+        ch <- int(self.Total)
 
 	return nil
 }

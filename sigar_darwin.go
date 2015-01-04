@@ -273,7 +273,9 @@ func (self *ProcMem) Get(pid int) error {
 	return nil
 }
 
-func (self *ProcTime) Get(pid int) error {
+func (self *ProcTime) Get(ch chan int) error {
+        pid := <- ch
+
 	info := C.struct_proc_taskallinfo{}
 
 	if err := task_info(pid, &info); err != nil {
@@ -290,6 +292,8 @@ func (self *ProcTime) Get(pid int) error {
 
 	self.StartTime = (uint64(info.pbsd.pbi_start_tvsec) * 1000) +
 		(uint64(info.pbsd.pbi_start_tvusec) / 1000)
+
+        ch <- int(self.Total)
 
 	return nil
 }
